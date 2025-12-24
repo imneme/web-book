@@ -1,5 +1,6 @@
 (() => {
   const KEY = "readerState.v2";
+  const article = document.querySelector("article.reader");
 
   function loadState() {
     try { return JSON.parse(localStorage.getItem(KEY) || "{}"); }
@@ -178,69 +179,68 @@
   });
 
   // Tap-to-scroll: Quick tap on content area scrolls down
-  (() => {
-    let touchStartTime = 0;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let hasMoved = false;
+  let touchStartTime = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let hasMoved = false;
 
-    const LONG_PRESS_MS = 500;  // Longer than this = long press, ignore
-    const MOVE_THRESHOLD = 10;   // Movement beyond this = drag, ignore
+  const LONG_PRESS_MS = 500;  // Longer than this = long press, ignore
+  const MOVE_THRESHOLD = 10;   // Movement beyond this = drag, ignore
 
-    document.addEventListener("touchstart", (e) => {
-      // Ignore if touching interactive elements
-      const target = e.target;
-      if (target.tagName === "A" || target.tagName === "BUTTON" ||
-          target.tagName === "INPUT" || target.tagName === "SELECT" ||
-          target.closest("button") || target.closest("a")) {
-        return;
-      }
+  article.addEventListener("touchstart", (e) => {
+    // Ignore if touching interactive elements
+    console.log(e.target);
+    const target = e.target;
+    if (target.tagName === "A" || target.tagName === "BUTTON" ||
+        target.tagName === "INPUT" || target.tagName === "SELECT" ||
+        target.closest("button") || target.closest("a")) {
+      return;
+    }
 
-      touchStartTime = Date.now();
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      hasMoved = false;
-    }, { passive: true });
+    touchStartTime = Date.now();
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    hasMoved = false;
+  }, { passive: true });
 
-    document.addEventListener("touchmove", (e) => {
-      if (touchStartTime === 0) return;
+  article.addEventListener("touchmove", (e) => {
+    if (touchStartTime === 0) return;
 
-      const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-      const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+    const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+    const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
 
-      if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
-        hasMoved = true;
-      }
-    }, { passive: true });
+    if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
+      hasMoved = true;
+    }
+  }, { passive: true });
 
-    document.addEventListener("touchend", (e) => {
-      if (touchStartTime === 0) return;
+  article.addEventListener("touchend", (e) => {
+    if (touchStartTime === 0) return;
 
-      const touchDuration = Date.now() - touchStartTime;
-      touchStartTime = 0;
+    const touchDuration = Date.now() - touchStartTime;
+    touchStartTime = 0;
 
-      // Ignore if it was a long press or a drag
-      if (touchDuration > LONG_PRESS_MS || hasMoved) {
-        return;
-      }
+    // Ignore if it was a long press or a drag
+    if (touchDuration > LONG_PRESS_MS || hasMoved) {
+      return;
+    }
 
-      // Ignore if touching interactive elements
-      const target = e.target;
-      if (target.tagName === "A" || target.tagName === "BUTTON" ||
-          target.tagName === "INPUT" || target.tagName === "SELECT" ||
-          target.closest("button") || target.closest("a")) {
-        return;
-      }
+    // Ignore if touching interactive elements
+    const target = e.target;
+    if (target.tagName === "A" || target.tagName === "BUTTON" ||
+        target.tagName === "INPUT" || target.tagName === "SELECT" ||
+        target.closest("button") || target.closest("a")) {
+      return;
+    }
 
-      // Quick tap detected! Scroll down one page
-      e.preventDefault();
-      pageScroll(1);
-    });
+    // Quick tap detected! Scroll down one page
+    e.preventDefault();
+    pageScroll(1);
+  });
 
-    document.addEventListener("touchcancel", () => {
-      touchStartTime = 0;
-      hasMoved = false;
-    }, { passive: true });
-  })();
+  article.addEventListener("touchcancel", () => {
+    touchStartTime = 0;
+    hasMoved = false;
+  }, { passive: true });
 
 })();
