@@ -77,20 +77,38 @@ header.sitebar{
   font-weight: 700;
   letter-spacing: .2px;
   white-space: nowrap;
+  /* Allow brand to shrink on mobile */
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: baseline;
+}
+.brand a{
+  color:var(--fg);
+  /* Allow book title to shrink but not disappear */
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .brand-where{
-    font-weight:400
+    font-weight:400;
     letter-spacing: normal;
     margin-left: 6px;
     font-size: 0.95rem;
     color: var(--muted);
+    /* Truncate chapter name first on mobile */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 2;
 }
-.brand a{color:var(--fg)}
 .spacer{flex:1}
 .navbtns{
   display:flex;
   gap: 8px;
   align-items:center;
+  /* Prevent nav buttons from shrinking */
+  flex-shrink: 0;
 }
 button, .btn{
   appearance:none;
@@ -226,3 +244,56 @@ kbd{
 }
 
 .smallnote{color:var(--muted); font-size: 0.95rem}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .sitebar-inner {
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .navbtns {
+    gap: 6px;
+  }
+
+  button, .btn {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  select#font-picker {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sitebar-inner {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .brand {
+    font-size: 15px;
+  }
+
+  .brand-where {
+    font-size: 0.85rem;
+    /* Hide chapter name on very small screens to prioritize book title */
+    max-width: 120px;
+  }
+
+  .navbtns {
+    gap: 4px;
+  }
+
+  button, .btn {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  select#font-picker {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+}
