@@ -192,6 +192,42 @@ def copy_cover(cfg: dict, root: Path, out_dir: Path) -> str | None:
     shutil.copy2(src, dst)
     return f"assets/{dst.name}"
 
+def copy_epub(cfg: dict, root: Path, out_dir: Path) -> str | None:
+    """
+    Copy the EPUB file to assets if configured, return relative path.
+    """
+    epub = cfg.get("epub_file")
+    if not epub:
+        return None
+    src = root / str(epub)
+    if not src.exists():
+        raise FileNotFoundError(f"epub_file not found: {src}")
+    out_assets = out_dir / "assets"
+    out_assets.mkdir(parents=True, exist_ok=True)
+    dst = out_assets / src.name
+    shutil.copy2(src, dst)
+    return f"assets/{dst.name}"
+
+def build_extra_links(cfg: dict, epub_href: str | None) -> str:
+    """
+    Build HTML for extra download/external links on the index page.
+    """
+    links_html = []
+
+    # EPUB download button
+    if epub_href:
+        links_html.append(f'<a class="btn" href="./{html.escape(epub_href)}" download>Download EPUB</a>')
+
+    # External links from config
+    external_links = cfg.get("external_link", [])
+    for link in external_links:
+        text = str(link.get("text", "External Link"))
+        url = str(link.get("url", ""))
+        if url:
+            links_html.append(f'<a class="btn" href="{html.escape(url)}" rel="noopener">{html.escape(text)}</a>')
+
+    return "\n    ".join(links_html)
+
 def build_site(toml_path: Path, out_dir: Path) -> None:
     root = toml_path.parent.resolve()
     cfg = load_config(toml_path)
@@ -207,6 +243,8 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
     cover_href = copy_cover(cfg, root, out_dir)
     cover_alt = str(cfg.get("cover_alt", "Cover image"))
     cover_title = str(cfg.get("cover_title", "")).strip()
+
+    epub_href = copy_epub(cfg, root, out_dir)
 
     chapters = build_chapters(cfg, root, out_dir)
 
@@ -257,6 +295,9 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
     front_html = load_optional_frontpage(root)
 
     primary_href = f"./{first.out_name}"
+    extra_links = build_extra_links(cfg, epub_href)
+    extra_links_html = f"\n    {extra_links}" if extra_links else ""
+
     index_content = f"""
 <h1>{html.escape(site_title)}</h1>
 <div class="meta">{html.escape(author) if author else ""}</div>
@@ -275,9 +316,7 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
        href="{html.escape(primary_href)}">
       Start reading →
     </a>
-    <a class="btn" href="./toc.html">Table of contents</a>
-    <a class="btn" href="./Phoenix.epub" download>Download EPUB</a>
-    <a class="btn" href="YOUR_AO3_URL_HERE" rel="noopener">Read on AO3</a>
+    <a class="btn" href="./toc.html">Table of contents</a>{extra_links_html}
   </p>
 </div>
 """
