@@ -1,0 +1,30 @@
+title = "A Demonstration Book"
+author = "Ann O'Nymous"
+language = "en"
+# cover_image = "src/cover.jpg"
+# cover_alt = "A silly demonstration book cover"
+# cover_title = "Some text to show about the cover"
+
+# Optional: if you want nice URLs like /chapter/...
+base_url = "/"
+
+[[chapter]]
+title = "Preface"
+source = "src/chapters/preface.md"
+
+[[chapter]]
+title = "Chapter 1: Wow, A Book!"
+source = "src/chapters/chap01.md"
+
+[[chapter]]
+title = "Chapter 2: Something Happens"
+source = "src/chapters/chap02.md"
+
+[[chapter]]
+title = "Chapter 3: The End?"
+source = "src/chapters/chap03.md"
+
+[[chapter]]
+title = "Afterword"
+source = "src/chapters/afterword.md"
+

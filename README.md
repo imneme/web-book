@@ -8,3 +8,19 @@ This code provides creates a static website to read a book (e.g., a novel or tec
 * Responsive design for various screen sizes
 
 The idea is not to be too complicated, just provide a simple and pleasant reading experience.
+
+## Usage
+
+You can build the demo book site by running:
+
+```
+python3 build.py demo/book.toml -o built
+```
+
+Which will create a static website in the `built` directory. You can then serve this directory using any static file server, such as `python3 -m http.server`:
+
+```
+cd built && python3 -m http.server 8000
+```
+
+Or use a `file://` URL to open `index.html` directly in your browser (although features like local storage may not work properly in that case).
