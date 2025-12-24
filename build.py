@@ -95,11 +95,11 @@ def html_page(*, site_title: str, page_title: str, page_id: str, content_html: s
       </div>
       <div class="spacer"></div>
       <div class="navbtns">
-        <a class="btn" data-nav="toc" href="./toc.html" title="Table of contents (t)">TOC</a>
         <select id="font-picker" title="Font">
         <option value="serif">Serif</option>
         <option value="sans">Sans</option>
         </select>
+        <a class="btn" data-nav="toc" href="./toc.html" title="Table of contents (t)">TOC</a>
         <button type="button" data-action="pageup" title="Page up (PageUp or Shift+Space)">▲</button>
         <button type="button" data-action="pagedown" title="Page down (Space / PageDown)">▼</button>
       </div>
