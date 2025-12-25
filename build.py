@@ -77,14 +77,61 @@ CSS = CSS_PATH.read_text(encoding="utf-8") if CSS_PATH.exists() else ""
 JS_PATH = Path(__file__).parent / "book.js"
 JS = JS_PATH.read_text(encoding="utf-8") if JS_PATH.exists() else ""
 
-def html_page(*, site_title: str, page_title: str, page_id: str, content_html: str, nav_html: str) -> str:
+def html_page(*, site_title: str, page_title: str, page_id: str, content_html: str, nav_html: str,
+              author: str = "", description: str = "", base_url: str = "",
+              favicon_href: str | None = None, lang: str = "en",
+              og_image: str | None = None) -> str:
     full_title = f"{page_title} · {site_title}" if page_title else site_title
+
+    # Build meta tags
+    meta_tags = []
+    if description:
+        meta_tags.append(f'  <meta name="description" content="{html.escape(description)}" />')
+    if author:
+        meta_tags.append(f'  <meta name="author" content="{html.escape(author)}" />')
+
+    # Open Graph tags
+    if base_url:
+        canonical_url = base_url.rstrip('/') + '/' + ('' if page_id == 'home' else f'{page_id}.html' if page_id != 'toc' else 'toc.html')
+        meta_tags.append(f'  <link rel="canonical" href="{html.escape(canonical_url)}" />')
+        meta_tags.append(f'  <meta property="og:url" content="{html.escape(canonical_url)}" />')
+
+    meta_tags.append(f'  <meta property="og:title" content="{html.escape(full_title)}" />')
+    meta_tags.append(f'  <meta property="og:type" content="website" />')
+    if description:
+        meta_tags.append(f'  <meta property="og:description" content="{html.escape(description)}" />')
+    if og_image and base_url:
+        img_url = base_url.rstrip('/') + '/' + og_image
+        meta_tags.append(f'  <meta property="og:image" content="{html.escape(img_url)}" />')
+
+    # Twitter Card tags
+    meta_tags.append(f'  <meta name="twitter:card" content="summary" />')
+    meta_tags.append(f'  <meta name="twitter:title" content="{html.escape(full_title)}" />')
+    if description:
+        meta_tags.append(f'  <meta name="twitter:description" content="{html.escape(description)}" />')
+    if og_image and base_url:
+        img_url = base_url.rstrip('/') + '/' + og_image
+        meta_tags.append(f'  <meta name="twitter:image" content="{html.escape(img_url)}" />')
+
+    # Favicon
+    favicon_tag = ""
+    if favicon_href:
+        favicon_tag = f'  <link rel="icon" href="./{html.escape(favicon_href)}" />\n  <link rel="apple-touch-icon" href="./{html.escape(favicon_href)}" />'
+
+    # Manifest
+    manifest_tag = '  <link rel="manifest" href="./manifest.json" />'
+
+    meta_html = "\n".join(meta_tags) if meta_tags else ""
+
     return f"""<!doctype html>
-<html lang="en" data-page-id="{html.escape(page_id)}">
+<html lang="{html.escape(lang)}" data-page-id="{html.escape(page_id)}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{html.escape(full_title)}</title>
+{meta_html}
+{favicon_tag}
+{manifest_tag}
   <style>{CSS}</style>
 </head>
 <body>
@@ -208,6 +255,20 @@ def copy_epub(cfg: dict, root: Path, out_dir: Path) -> str | None:
     shutil.copy2(src, dst)
     return f"assets/{dst.name}"
 
+def copy_favicon(cfg: dict, root: Path, out_dir: Path) -> str | None:
+    """
+    Copy the favicon file to output if configured, return relative path.
+    """
+    favicon = cfg.get("favicon")
+    if not favicon:
+        return None
+    src = root / str(favicon)
+    if not src.exists():
+        raise FileNotFoundError(f"favicon not found: {src}")
+    dst = out_dir / src.name
+    shutil.copy2(src, dst)
+    return src.name
+
 def build_extra_links(cfg: dict, epub_href: str | None) -> str:
     """
     Build HTML for extra download/external links on the index page.
@@ -228,6 +289,134 @@ def build_extra_links(cfg: dict, epub_href: str | None) -> str:
 
     return "\n    ".join(links_html)
 
+def generate_sitemap(cfg: dict, chapters: list[Chapter]) -> str:
+    """
+    Generate sitemap.xml for SEO.
+    """
+    base_url_raw = str(cfg.get("base_url", "")).strip()
+    if not base_url_raw:
+        return ""  # Skip sitemap if no base_url configured
+    base_url = base_url_raw.rstrip('/')
+
+    lastmod = datetime.utcnow().strftime("%Y-%m-%d")
+
+    urls = []
+    # Home page
+    urls.append(f"""  <url>
+    <loc>{html.escape(base_url)}/</loc>
+    <lastmod>{lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>""")
+
+    # TOC page
+    urls.append(f"""  <url>
+    <loc>{html.escape(base_url)}/toc.html</loc>
+    <lastmod>{lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>""")
+
+    # Chapter pages
+    for ch in chapters:
+        urls.append(f"""  <url>
+    <loc>{html.escape(base_url)}/{html.escape(ch.out_name)}</loc>
+    <lastmod>{lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>""")
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>
+"""
+
+def generate_rss(cfg: dict, chapters: list[Chapter]) -> str:
+    """
+    Generate RSS feed for the book.
+    """
+    base_url_raw = str(cfg.get("base_url", "")).strip()
+    if not base_url_raw:
+        return ""  # Skip RSS if no base_url configured
+    base_url = base_url_raw.rstrip('/')
+
+    site_title = str(cfg.get("title", "Untitled Book"))
+    author = str(cfg.get("author", "")).strip()
+    description = str(cfg.get("description", f"Read {site_title} online")).strip()
+    lang = str(cfg.get("language", "en")).strip()
+
+    pub_date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+
+    items = []
+    for ch in chapters:
+        items.append(f"""    <item>
+      <title>{html.escape(ch.title)}</title>
+      <link>{html.escape(base_url)}/{html.escape(ch.out_name)}</link>
+      <guid>{html.escape(base_url)}/{html.escape(ch.out_name)}</guid>
+      <description>{html.escape(ch.title)}</description>
+      <pubDate>{pub_date}</pubDate>
+    </item>""")
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>{html.escape(site_title)}</title>
+    <link>{html.escape(base_url)}/</link>
+    <description>{html.escape(description)}</description>
+    <language>{html.escape(lang)}</language>
+    <pubDate>{pub_date}</pubDate>
+    <atom:link href="{html.escape(base_url)}/feed.xml" rel="self" type="application/rss+xml" />
+{chr(10).join(items)}
+  </channel>
+</rss>
+"""
+
+def generate_robots_txt(cfg: dict) -> str:
+    """
+    Generate robots.txt. Can be overridden via robots_txt config option.
+    """
+    custom = cfg.get("robots_txt")
+    if custom:
+        return str(custom)
+
+    base_url = str(cfg.get("base_url", "")).rstrip('/')
+    sitemap_line = f"\nSitemap: {base_url}/sitemap.xml" if base_url else ""
+
+    return f"""User-agent: *
+Allow: /{sitemap_line}
+"""
+
+def generate_manifest(cfg: dict, favicon_href: str | None) -> str:
+    """
+    Generate manifest.json for PWA support.
+    """
+    site_title = str(cfg.get("title", "Untitled Book"))
+    description = str(cfg.get("description", f"Read {site_title} online")).strip()
+
+    icons = []
+    if favicon_href:
+        # Assume it's a reasonable size for now
+        icons.append({
+            "src": favicon_href,
+            "sizes": "any",
+            "type": "image/png"
+        })
+
+    import json
+    manifest = {
+        "name": site_title,
+        "short_name": site_title[:12] if len(site_title) > 12 else site_title,
+        "description": description,
+        "start_url": "./index.html",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#000000",
+        "icons": icons
+    }
+
+    return json.dumps(manifest, indent=2)
+
 def build_site(toml_path: Path, out_dir: Path) -> None:
     root = toml_path.parent.resolve()
     cfg = load_config(toml_path)
@@ -235,6 +424,8 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
     site_title = str(cfg.get("title", "Untitled Book"))
     author = str(cfg.get("author", "")).strip()
     lang = str(cfg.get("language", "en")).strip()
+    description = str(cfg.get("description", f"Read {site_title} online")).strip()
+    base_url = str(cfg.get("base_url", "")).rstrip('/')
 
     if out_dir.exists():
         shutil.rmtree(out_dir)
@@ -245,6 +436,7 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
     cover_title = str(cfg.get("cover_title", "")).strip()
 
     epub_href = copy_epub(cfg, root, out_dir)
+    favicon_href = copy_favicon(cfg, root, out_dir)
 
     chapters = build_chapters(cfg, root, out_dir)
 
@@ -270,7 +462,13 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
         page_title="Table of contents",
         page_id="toc",
         content_html=toc_content,
-        nav_html=""
+        nav_html="",
+        author=author,
+        description=description,
+        base_url=base_url,
+        favicon_href=favicon_href,
+        lang=lang,
+        og_image=cover_href
     ))
 
     # Index page (cover + quick links)
@@ -325,7 +523,13 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
         page_title="Home",
         page_id="home",
         content_html=index_content,
-        nav_html=""
+        nav_html="",
+        author=author,
+        description=description,
+        base_url=base_url,
+        favicon_href=favicon_href,
+        lang=lang,
+        og_image=cover_href
     ))
 
     # Chapters
@@ -339,7 +543,13 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
             page_title=ch.title,
             page_id=ch.slug,
             content_html=content,
-            nav_html=chapter_nav(prev_href, next_href)
+            nav_html=chapter_nav(prev_href, next_href),
+            author=author,
+            description=f"{ch.title} - {description}",
+            base_url=base_url,
+            favicon_href=favicon_href,
+            lang=lang,
+            og_image=cover_href
         ))
 
     # Small redirect for convenience
@@ -351,10 +561,34 @@ def build_site(toml_path: Path, out_dir: Path) -> None:
 <h1>Not found</h1>
 <p>Try the <a href="./toc.html">table of contents</a>.</p>
 """,
-        nav_html=""
+        nav_html="",
+        author=author,
+        description=description,
+        base_url=base_url,
+        favicon_href=favicon_href,
+        lang=lang,
+        og_image=cover_href
     ))
 
-    # Write a tiny “how to host” helper (optional, but nice)
+    # Generate sitemap.xml
+    sitemap_xml = generate_sitemap(cfg, chapters)
+    if sitemap_xml:
+        write_text(out_dir / "sitemap.xml", sitemap_xml)
+
+    # Generate RSS feed
+    rss_xml = generate_rss(cfg, chapters)
+    if rss_xml:
+        write_text(out_dir / "feed.xml", rss_xml)
+
+    # Generate robots.txt
+    robots_txt = generate_robots_txt(cfg)
+    write_text(out_dir / "robots.txt", robots_txt)
+
+    # Generate manifest.json
+    manifest_json = generate_manifest(cfg, favicon_href)
+    write_text(out_dir / "manifest.json", manifest_json)
+
+    # Write a tiny "how to host" helper (optional, but nice)
     write_text(out_dir / "README.txt",
                "Upload this folder to any static host.\n"
                "- GitHub Pages: push contents to /docs or gh-pages.\n"
