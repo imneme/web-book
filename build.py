@@ -8,7 +8,7 @@ import re
 import shutil
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -68,6 +68,7 @@ class Chapter:
     source: Path
     slug: str
     out_name: str  # file name in output, e.g. "chapter-1-the-awkward.html"
+    lastmod: datetime
 
 # ---------- Templating ----------
 
@@ -206,7 +207,8 @@ def build_chapters(cfg: dict, root: Path, out_dir: Path) -> list[Chapter]:
             raise FileNotFoundError(f"Chapter source not found: {src}")
         slug = slugify(f"{i:02d}-{title}")
         out_name = f"{slug}.html"
-        chapters.append(Chapter(i, title, src, slug, out_name))
+        src_mtime = datetime.fromtimestamp(src.stat().st_mtime, tz=timezone.utc)
+        chapters.append(Chapter(i, title, src, slug, out_name, src_mtime))
     return chapters
 
 def chapter_content_html(ch: Chapter) -> str:
@@ -297,15 +299,18 @@ def generate_sitemap(cfg: dict, chapters: list[Chapter]) -> str:
     if not base_url_raw:
         return ""  # Skip sitemap if no base_url configured
     base_url = base_url_raw.rstrip('/')
+    changefreq = str(cfg.get("sitemap_changefreq", "monthly")).strip().lower()
 
-    lastmod = datetime.utcnow().strftime("%Y-%m-%d")
+    def format_datetime(dt: datetime) -> str:
+        return dt.strftime("%Y-%m-%d")
+    lastmod = format_datetime(datetime.now(timezone.utc))
 
     urls = []
     # Home page
     urls.append(f"""  <url>
     <loc>{html.escape(base_url)}/</loc>
     <lastmod>{lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
+    <changefreq>{changefreq}</changefreq>
     <priority>1.0</priority>
   </url>""")
 
@@ -313,7 +318,7 @@ def generate_sitemap(cfg: dict, chapters: list[Chapter]) -> str:
     urls.append(f"""  <url>
     <loc>{html.escape(base_url)}/toc.html</loc>
     <lastmod>{lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
+    <changefreq>{changefreq}</changefreq>
     <priority>0.9</priority>
   </url>""")
 
@@ -321,8 +326,8 @@ def generate_sitemap(cfg: dict, chapters: list[Chapter]) -> str:
     for ch in chapters:
         urls.append(f"""  <url>
     <loc>{html.escape(base_url)}/{html.escape(ch.out_name)}</loc>
-    <lastmod>{lastmod}</lastmod>
-    <changefreq>monthly</changefreq>
+    <lastmod>{format_datetime(ch.lastmod)}</lastmod>
+    <changefreq>{changefreq}</changefreq>
     <priority>0.8</priority>
   </url>""")
 
@@ -346,7 +351,7 @@ def generate_rss(cfg: dict, chapters: list[Chapter]) -> str:
     description = str(cfg.get("description", f"Read {site_title} online")).strip()
     lang = str(cfg.get("language", "en")).strip()
 
-    pub_date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+    pub_date = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
 
     items = []
     for ch in chapters:
