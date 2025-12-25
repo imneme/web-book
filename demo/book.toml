@@ -1,12 +1,16 @@
 title = "A Demonstration Book"
 author = "Ann O'Nymous"
 language = "en"
+description = "A wonderful demonstration of the book reader, featuring multiple chapters of engaging content."
 # cover_image = "src/cover.jpg"
 # cover_alt = "A silly demonstration book cover"
 # cover_title = "Some text to show about the cover"
 
 # Optional: if you want nice URLs like /chapter/...
-base_url = "/"
+base_url = "https://example.com"
+
+# Optional: Favicon (any image format, typically .ico, .png, .svg)
+# favicon = "src/favicon.png"
 
 # Optional: EPUB file to copy to assets and offer as download
 # epub_file = "src/MyBook.epub"
