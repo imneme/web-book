@@ -8,6 +8,18 @@ language = "en"
 # Optional: if you want nice URLs like /chapter/...
 base_url = "/"
 
+# Optional: EPUB file to copy to assets and offer as download
+# epub_file = "src/MyBook.epub"
+
+# Optional: External links to show on the index page
+# [[external_link]]
+# text = "Read on AO3"
+# url = "https://archiveofourown.org/works/12345"
+#
+# [[external_link]]
+# text = "Buy on Amazon"
+# url = "https://www.amazon.com/..."
+
 [[chapter]]
 title = "Preface"
 source = "src/chapters/preface.md"
