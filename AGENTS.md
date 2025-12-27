@@ -52,7 +52,7 @@
 </header>
 ```
 
-**Mobile Responsive Features** (as of 2024):
+**Mobile Responsive Features** (as of 2025):
 - Text truncation with ellipsis for long book titles and chapter names
 - Chapter name truncates first (higher `flex-shrink` value)
 - Navigation buttons never shrink (`flex-shrink: 0`)
