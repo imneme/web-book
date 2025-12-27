@@ -1,0 +1,5 @@
+SPDXVersion: SPDX-2.1
+DataLicense: CC0-1.0
+PackageName: web-book
+PackageOriginator: Melissa O'Neill <oneill@acm.org>
+PackageLicenseDeclared: (MIT OR Apache-2.0)
