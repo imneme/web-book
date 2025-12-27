@@ -152,7 +152,7 @@
     const picker = document.getElementById("font-picker");
     if (!picker) return;
   
-    picker.value = document.documentElement.dataset.font || "sans";
+    picker.value = document.documentElement.dataset.font || "serif";
     picker.addEventListener("change", () => applyFont(picker.value));
 
     const cover = document.querySelector(".cover[data-cover-note]");

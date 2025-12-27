@@ -144,7 +144,7 @@ def html_page(*, site_title: str, page_title: str, page_id: str, content_html: s
       <div class="spacer"></div>
       <div class="navbtns">
         <select id="font-picker" title="Font">
-        <option value="serif">Serif</option>
+        <option value="serif" selected="selected">Serif</option>
         <option value="sans">Sans</option>
         </select>
         <a class="btn" data-nav="toc" href="./toc.html" title="Table of contents (t)">TOC</a>
