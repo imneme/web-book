@@ -24,3 +24,7 @@ cd built && python3 -m http.server 8000
 ```
 
 Or use a `file://` URL to open `index.html` directly in your browser (although features like local storage may not work properly in that case).
+
+## Sites Using This
+
+The book site for the fan-fiction novel [_Phoenix_](https://phoenix.team-us.org/) uses this code.  It seems to be working well there.
